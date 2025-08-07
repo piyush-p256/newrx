@@ -1,0 +1,11 @@
+fastapi
+uvicorn
+pinecone
+sentence-transformers
+transformers
+torch
+pymupdf
+python-docx
+aiohttp
+openai
+sqlalchemy
