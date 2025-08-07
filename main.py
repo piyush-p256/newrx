@@ -17,17 +17,11 @@ logger = logging.getLogger(__name__)
 
 # Models
 class DocumentRequest(BaseModel):
-    documents: list[str]
+    documents: list[str] | str
     questions: list[str]
 
-class QueryResponse(BaseModel):
-    answer: str
-    conditions: list[str]
-    explanation: str
-    clause_ids: list[str]
-
 class APIResponse(BaseModel):
-    answers: list[QueryResponse]
+    answers: list[str]
 
 # Lifespan manager
 @asynccontextmanager
@@ -90,25 +84,30 @@ async def process_documents(documents: list):
 # API Endpoint
 @app.post("/hackrx/run", response_model=APIResponse)
 async def run_query(request: DocumentRequest, auth: None = Depends(verify_token)):
+    # Normalize documents to a list
+    documents = request.documents if isinstance(request.documents, list) else [request.documents]
+
     # Process documents (with caching)
-    logger.info(f"Processing {len(request.documents)} documents...")
-    await process_documents(request.documents)
-    
+    logger.info(f"Processing {len(documents)} documents...")
+    await process_documents(documents)
+
     # Process queries
     answers = []
     logger.info(f"Processing {len(request.questions)} questions...")
-    
+
     for query in request.questions:
         # Generate query embedding
         query_embed = generate_embeddings([query])[0]
-        
+
         # Retrieve relevant chunks
         context_chunks = query_index(query_embed)
         context = "\n\n".join([text for text, _ in context_chunks])
         logger.debug(f"Retrieved {len(context_chunks)} context chunks for query")
-        
-        # Generate structured response
-        response = generate_response(query, context)
-        answers.append(QueryResponse(**response))
-    
+
+        # Generate plain answer
+        answer = generate_response(query, context)
+        if not answer:
+            answer = "No valid response generated."
+        answers.append(answer)
+
     return APIResponse(answers=answers)

@@ -23,7 +23,7 @@ Respond in JSON format:
 }}
 """
 
-def generate_response(query: str, context: str) -> dict:
+def generate_response(query: str, context: str) -> str:
     try:
         response = client.chat.completions.create(
             model=Config.OPENROUTER_MODEL,
@@ -42,13 +42,8 @@ def generate_response(query: str, context: str) -> dict:
         if not raw_output:
             raise ValueError("LLM returned empty response")
 
-        return json.loads(raw_output)
+        return json.loads(raw_output)["answer"]
 
     except Exception as e:
         print("❌ Error in generate_response:", str(e))
-        return {
-            "answer": "Failed to generate response",
-            "conditions": [],
-            "explanation": str(e),
-            "clause_ids": []
-        }
+        return "Failed to generate response due to an error."
